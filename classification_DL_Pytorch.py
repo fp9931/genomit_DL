@@ -23,7 +23,7 @@ import os
 
 # Check for GPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
+# print(device)
 # Set a random seed for reproducibility
 random_state = 42
 random.seed(random_state)
@@ -34,10 +34,10 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 # Set path
-general_path = os.path.join(os.path.dirname(os.getcwd()), "symptoms")
+general_path = os.path.join(os.path.dirname(os.getcwd()), "data_genomit\no_symptoms")
 
 # Load the dataset
-df = pd.read_csv(os.path.join(general_path, "df_symp.csv"))
+df = pd.read_csv(os.path.join(general_path, "df_no_symp.csv"))
 
 # Swap the values of 'gendna_type' (0 -> 1 and 1 -> 0) to consider mtDNA as the positive class
 df['gendna_type'] = df['gendna_type'].apply(lambda x: 1 if x == 0 else 0)
@@ -293,7 +293,6 @@ for feature_set in feature_sets:
                                     "sampling": sampling_name,
                                     "confusion_matrix": conf_matrix_train.tolist(),
                                     "train_loss_history": best_model_train_loss,
-                                    "val_loss_history": best_model_val_loss,
                                     "hyperparameters": {
                                         "activation function": activation_func,
                                         "hidden layer": hidden_layers,
@@ -325,14 +324,6 @@ sorted_scores_with_indices = sorted(enumerate(all_scores), key=lambda x: x[1][0]
 all_scores = [all_scores[idx] for idx, _ in sorted_scores_with_indices]
 all_models = [all_models[idx] for idx, _ in sorted_scores_with_indices]
 all_configs = [all_configs[idx] for idx, _ in sorted_scores_with_indices]
-
-# Save all models and configurations
-# with open(os.path.join(general_path, "all_scores.pkl"), 'wb') as file:
-#    pickle.dump(all_scores, file)
-#with open(os.path.join(general_path, "all_models.pkl"), 'wb') as file:
-#   pickle.dump(all_models, file)
-#with open(os.path.join(general_path, "all_configs.pkl"), 'wb') as file:
-#   pickle.dump(all_configs, file)
 
 # Ask user to choose the best model for testing
 print("\nChoose the best model configuration for the test set:")
