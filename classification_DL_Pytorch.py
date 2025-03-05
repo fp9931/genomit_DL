@@ -23,7 +23,8 @@ import os
 
 # Check for GPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# print(device)
+print(device)
+
 # Set a random seed for reproducibility
 random_state = 42
 random.seed(random_state)
@@ -34,7 +35,7 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 # Set path
-general_path = os.path.join(os.path.dirname(os.getcwd()), "data_genomit\no_symptoms")
+general_path = os.path.join(os.path.dirname(os.getcwd()), "data_genomit\\no_symptoms")
 
 # Load the dataset
 df = pd.read_csv(os.path.join(general_path, "df_no_symp.csv"))
@@ -54,6 +55,8 @@ X_train_full = df_train.drop(['gendna_type', 'test'], axis=1)
 y_train_full = df_train['gendna_type']
 X_test = df_test.drop(['gendna_type', 'test'], axis=1)
 y_test = df_test['gendna_type']
+
+print("ALL data retrieved")
 
 # Compute missing value proportions
 missing_ratios = (X_train_full == -998).mean()  # Proportion of missing values per feature
