@@ -35,10 +35,12 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 # Set path
-general_path = os.path.join(os.path.dirname(os.getcwd()), "data_genomit/no_symptoms")
+general_path = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())))
+data_path = os.path.join(general_path, "Data/data_genomit")
+result_path = os.path.join(general_path, "Results/results_genomit/no_symptoms")
 
 # Load the dataset
-df = pd.read_csv(os.path.join(general_path, "df_no_symp.csv"))
+df = pd.read_csv(os.path.join(data_path, "df_no_symp.csv"))
 
 # Swap the values of 'gendna_type' (0 -> 1 and 1 -> 0) to consider mtDNA as the positive class
 df['gendna_type'] = df['gendna_type'].apply(lambda x: 1 if x == 0 else 0)
@@ -305,20 +307,20 @@ for feature_set in feature_sets:
                                         "batch_size": batch_size
                                     }
                                 })
-                            # Sort the scores in descending order based on the F1-score (first value in tuple), keeping corresponding accuracy (second value)
-                            sorted_scores_with_indices = sorted(enumerate(all_scores), key=lambda x: x[1][0], reverse=True)
+                            # # Sort the scores in descending order based on the F1-score (first value in tuple), keeping corresponding accuracy (second value)
+                            # sorted_scores_with_indices = sorted(enumerate(all_scores), key=lambda x: x[1][0], reverse=True)
 
-                            # Sort the corresponding other files based on the sorted scores
-                            all_scores = [all_scores[idx] for idx, _ in sorted_scores_with_indices]
-                            all_models = [all_models[idx] for idx, _ in sorted_scores_with_indices]
-                            all_configs = [all_configs[idx] for idx, _ in sorted_scores_with_indices]
+                            # # Sort the corresponding other files based on the sorted scores
+                            # all_scores = [all_scores[idx] for idx, _ in sorted_scores_with_indices]
+                            # all_models = [all_models[idx] for idx, _ in sorted_scores_with_indices]
+                            # all_configs = [all_configs[idx] for idx, _ in sorted_scores_with_indices]
 
                             # Save all models and configurations
-                            with open(os.path.join(general_path, "all_scores.pkl"), 'wb') as file:
+                            with open(os.path.join(result_path, "all_scores.pkl"), 'wb') as file:
                                 pickle.dump(all_scores, file)
-                            with open(os.path.join(general_path, "all_configs.pkl"), 'wb') as file:
+                            with open(os.path.join(result_path, "all_configs.pkl"), 'wb') as file:
                                 pickle.dump(all_configs, file)
-                            with open(os.path.join(general_path, "all_models.pkl"), 'wb') as file:
+                            with open(os.path.join(result_path, "all_models.pkl"), 'wb') as file:
                                 pickle.dump(all_models, file)
 
 # Sort the scores in descending order based on the F1-score (first value in tuple), keeping corresponding accuracy (second value)
