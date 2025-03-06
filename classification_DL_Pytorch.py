@@ -35,7 +35,7 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 # Set path
-general_path = os.path.join(os.path.dirname(os.getcwd()), "data_genomit\\no_symptoms")
+general_path = os.path.join(os.path.dirname(os.getcwd()), "data_genomit/no_symptoms")
 
 # Load the dataset
 df = pd.read_csv(os.path.join(general_path, "df_no_symp.csv"))
@@ -205,7 +205,7 @@ for feature_set in feature_sets:
                 for learning_rate in params_grid['learning rate']:
                     for dropout in params_grid['dropout']:
                         for batch_size in params_grid['batch_size']:
-                            print(f"{activation_func}, {hidden_layers}, {learning_rate}, {dropout}, {batch_size}")
+                            # print(f"{activation_func}, {hidden_layers}, {learning_rate}, {dropout}, {batch_size}")
 
                             fold_scores = []
                             best_model_validation = None
@@ -284,9 +284,10 @@ for feature_set in feature_sets:
                                 accuracy_train = accuracy_score(y_resampled, y_train_pred)
                                 f1_score_train = f1_score(y_resampled, y_train_pred)
                                 conf_matrix_train = confusion_matrix(y_resampled, y_train_pred)
-                                print(conf_matrix_train)
-                                print(f"Training Accuracy: {accuracy_train:.3f}")
-                                print(f"F1-score: {f1_score_train:.3f}")
+                                # print(conf_matrix_train)
+                                # print(f"Training Accuracy: {accuracy_train:.3f}")
+                                # print(f"F1-score: {f1_score_train:.3f}")
+
                                 # Save all models and configurations
                                 all_scores.append((f1_score_train, accuracy_train))
                                 all_models.append(best_model_validation)
