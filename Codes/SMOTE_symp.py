@@ -35,12 +35,14 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 # Set path
-general_path = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())))
+general_path = os.path.dirname(os.getcwd())
 data_path = os.path.join(general_path, "Data/data_genomit")
-result_path = os.path.join(general_path, "Results/results_genomit/no_symptoms")
+result_path = os.path.join(general_path, "Results/results_genomit/symptoms/SMOTE")
+if not os.path.exists(result_path):
+    os.makedirs(result_path)
 
 # Load the dataset
-df = pd.read_csv(os.path.join(data_path, "df_no_symp.csv"))
+df = pd.read_csv(os.path.join(data_path, "df_symp.csv"))
 
 # Swap the values of 'gendna_type' (0 -> 1 and 1 -> 0) to consider mtDNA as the positive class
 df['gendna_type'] = df['gendna_type'].apply(lambda x: 1 if x == 0 else 0)
@@ -80,9 +82,9 @@ feature_sets = [selected_features[:i] for i in range(1, len(selected_features) +
 
 # Define resampling strategies
 samplers = {
-    "no_resampling": None,
+    #"no_resampling": None,
     "SMOTE": SMOTE(random_state=random_state),
-    "ADASYN": ADASYN(random_state=random_state)
+    #"ADASYN": ADASYN(random_state=random_state)
 }
 
 params_grid = {
@@ -207,10 +209,20 @@ for feature_set in feature_sets:
                 for learning_rate in params_grid['learning rate']:
                     for dropout in params_grid['dropout']:
                         for batch_size in params_grid['batch_size']:
-                            # print(f"{activation_func}, {hidden_layers}, {learning_rate}, {dropout}, {batch_size}")
+                            print(f"{activation_func}, {hidden_layers}, {learning_rate}, {dropout}, {batch_size}")
+
+                            model = Model(input_dim, hidden_layers, activation_func, dropout)
+                            model = nn.DataParallel(model)
+                            model.to(device)
+
+                            criterion = nn.BCELoss()
+                            optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+                            early_stopping = EarlyStopping(patience=10, restore_best_weights=True)
+                            reduce_lr = ReduceLROnPlateau(optimizer, factor=0.2, patience=5, min_lr=0.0001)
 
                             fold_scores = []
-                            best_model_validation = None
+                            best_model_validation = model
                             max_f1_score = 0
                             train_loss_history = []
                             val_loss_history = []
@@ -223,13 +235,6 @@ for feature_set in feature_sets:
                                 
                                 train_loader = DataLoader(TensorDataset(X_train_split, y_train_split), batch_size=batch_size, shuffle=True)
                                 val_loader = DataLoader(TensorDataset(X_val_split, y_val_split), batch_size=batch_size)
-
-                                model = Model(input_dim, hidden_layers, activation_func, dropout).to(device)
-                                criterion = nn.BCELoss()
-                                optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-                                early_stopping = EarlyStopping(patience=10, restore_best_weights=True)
-                                reduce_lr = ReduceLROnPlateau(optimizer, factor=0.2, patience=5, min_lr=0.0001)
 
                                 val_loss = []
                                 train_loss = []
@@ -271,7 +276,7 @@ for feature_set in feature_sets:
                                         break
                                 
                                 # best for this fold
-                                if f1 > max_f1_score:
+                                if f1 >= max_f1_score:
                                     best_model_validation = model
                                     max_f1_score = f1
                                     train_loss_history.append(train_loss)
@@ -299,6 +304,7 @@ for feature_set in feature_sets:
                                     "sampling": sampling_name,
                                     "confusion_matrix": conf_matrix_train.tolist(),
                                     "train_loss_history": best_model_train_loss,
+                                    "val_loss_history": best_model_val_loss,
                                     "hyperparameters": {
                                         "activation function": activation_func,
                                         "hidden layer": hidden_layers,
