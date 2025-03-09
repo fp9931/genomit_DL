@@ -37,7 +37,7 @@ torch.backends.cudnn.benchmark = False
 # Set path
 general_path = os.path.dirname(os.getcwd())
 data_path = os.path.join(general_path, "Data/data_genomit")
-result_path = os.path.join(general_path, "Results/results_genomit/symptoms/SMOTE")
+result_path = os.path.join(general_path, "Results/results_genomit/symptoms_45/no_sampling")
 if not os.path.exists(result_path):
     os.makedirs(result_path)
 
@@ -83,8 +83,8 @@ feature_sets = [selected_features[:i] for i in range(1, len(selected_features) +
 # Define resampling strategies
 samplers = {
     #"no_resampling": None,
-    "SMOTE": SMOTE(random_state=random_state),
-    #"ADASYN": ADASYN(random_state=random_state)
+    #"SMOTE": SMOTE(random_state=random_state),
+    "ADASYN": ADASYN(random_state=random_state)
 }
 
 params_grid = {
@@ -185,7 +185,7 @@ class ReduceLROnPlateau:
 
     
 # Loop through feature sets and sampling methods
-for feature_set in feature_sets:
+for feature_set in feature_sets[45:]:
     X_train_subset = X_train_scaled_df[feature_set]
     X_test_subset = X_test_scaled_df[feature_set]
     input_dim = X_train_subset.shape[1]
@@ -322,11 +322,11 @@ for feature_set in feature_sets:
                             # all_configs = [all_configs[idx] for idx, _ in sorted_scores_with_indices]
 
                             # Save all models and configurations
-                            with open(os.path.join(result_path, "all_scores.pkl"), 'wb') as file:
+                            with open(os.path.join(result_path, "all_scores_2.pkl"), 'wb') as file:
                                 pickle.dump(all_scores, file)
-                            with open(os.path.join(result_path, "all_configs.pkl"), 'wb') as file:
+                            with open(os.path.join(result_path, "all_configs_2.pkl"), 'wb') as file:
                                 pickle.dump(all_configs, file)
-                            with open(os.path.join(result_path, "all_models.pkl"), 'wb') as file:
+                            with open(os.path.join(result_path, "all_models_2.pkl"), 'wb') as file:
                                 pickle.dump(all_models, file)
 
 # Sort the scores in descending order based on the F1-score (first value in tuple), keeping corresponding accuracy (second value)
