@@ -83,8 +83,8 @@ feature_sets = [selected_features[:i] for i in range(1, len(selected_features) +
 # Define resampling strategies
 samplers = {
     #"no_resampling": None,
-    #"SMOTE": SMOTE(random_state=random_state),
-    "ADASYN": ADASYN(random_state=random_state)
+    "SMOTE": SMOTE(random_state=random_state),
+    #"ADASYN": ADASYN(random_state=random_state)
 }
 
 params_grid = {

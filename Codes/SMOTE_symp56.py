@@ -37,7 +37,7 @@ torch.backends.cudnn.benchmark = False
 # Set path
 general_path = os.path.dirname(os.getcwd())
 data_path = os.path.join(general_path, "Data/data_genomit")
-result_path = os.path.join(general_path, "Results/results_genomit/symptoms_45/SMOTE")
+result_path = os.path.join(general_path, "Results/results_genomit/symptoms_56/SMOTE")
 if not os.path.exists(result_path):
     os.makedirs(result_path)
 
@@ -185,14 +185,14 @@ class ReduceLROnPlateau:
 
     
 # Loop through feature sets and sampling methods
-for feature_set in feature_sets[45:]:
-    X_train_subset = X_train_scaled_df[feature_set]
-    X_test_subset = X_test_scaled_df[feature_set]
+for feature_set in feature_sets[0:1]:
+    X_train_subset = X_train_scaled_df
+    X_test_subset = X_test_scaled_df
     input_dim = X_train_subset.shape[1]
 
     for sampling_name, sampler in samplers.items():
         iteration_count += 1
-        print(f"\nIteration {iteration_count}/{total_iterations} | Features: {len(feature_set)} | Sampling: {sampling_name}")
+        print(f"\nIteration {iteration_count}/{total_iterations} | Features: 56 | Sampling: {sampling_name}")
 
         # Apply resampling
         X_resampled, y_resampled = X_train_subset, y_train_full
