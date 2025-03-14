@@ -4,7 +4,6 @@ import torch.optim as optim
 import torch.multiprocessing as mp
 from torch.utils.data import DataLoader, TensorDataset
 
-
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, precision_score, recall_score
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -31,18 +30,19 @@ random.seed(random_state)
 np.random.seed(random_state)
 torch.manual_seed(random_state)
 torch.cuda.manual_seed(random_state)
+torch.cuda.manual_seed_all(random_state)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 # Set path
 general_path = os.path.dirname(os.getcwd())
-data_path = os.path.join(general_path, "Data\\data_genomit")
-result_path = os.path.join(general_path, "Results\\results_genomit\\cineca\\results_genomit\\symptoms_40\\SMOTE")
+data_path = os.path.join(general_path, "Data/data_genomit")
+result_path = os.path.join(general_path, "Results_14_03/full/penalty_factor/41_50")
 if not os.path.exists(result_path):
     os.makedirs(result_path)
 
 # Load the dataset
-df = pd.read_csv(os.path.join(data_path, "df_symp.csv"))
+df = pd.read_csv(os.path.join(data_path, "df_full.csv"))
 
 # Swap the values of 'gendna_type' (0 -> 1 and 1 -> 0) to consider mtDNA as the positive class
 df['gendna_type'] = df['gendna_type'].apply(lambda x: 1 if x == 0 else 0)
@@ -59,8 +59,6 @@ X_train_full = df_train.drop(['gendna_type', 'test'], axis=1)
 y_train_full = df_train['gendna_type']
 X_test = df_test.drop(['gendna_type', 'test'], axis=1)
 y_test = df_test['gendna_type']
-
-print("ALL data retrieved")
 
 # Compute missing value proportions
 missing_ratios = (X_train_full == -998).mean()  # Proportion of missing values per feature
@@ -82,17 +80,17 @@ feature_sets = [selected_features[:i] for i in range(1, len(selected_features) +
 
 # Define resampling strategies
 samplers = {
-    #"no_resampling": None,
+    "no_resampling": None,
     "SMOTE": SMOTE(random_state=random_state),
-    #"ADASYN": ADASYN(random_state=random_state)
+    "ADASYN": ADASYN(random_state=random_state)
 }
 
 params_grid = {
-    'activation function': ['ReLU', 'Tanh', 'Sigmoid', 'SiLU', 'GELU', 'LeakyReLU'],
-    'hidden layer': [(8,), (16,), (32,), (64,), (16,8), (32,16), (64,32), (32, 16, 8), (64, 32, 16), (16, 32, 16)],
-    'learning rate': [0.0001, 0.001, 0.01, 0.1],
-    'dropout': [None, 0.25],
-    'batch_size': [32, 64]
+    'activation function': ['ReLU','LeakyReLU'],
+    'hidden layer': [(8,), (16,), (32,), (64,), (16,8), (32,16), (64,32)],
+    'learning rate': [0.0001, 0.001],
+    'dropout': [0.2, 0.3, 0.4, 0.5],
+    'batch_size': [8, 16]
 }
 
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
@@ -101,10 +99,6 @@ cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
 all_scores = []
 all_models = []
 all_configs = []
-
-# Total iterations count
-total_iterations = len(samplers) * len(feature_sets)
-iteration_count = 0
 
 # Define the model
 class Model(nn.Module):
@@ -152,7 +146,6 @@ class EarlyStopping:
             self.epochs_since_improvement += 1
 
         if self.epochs_since_improvement >= self.patience:
-            #print(f"Early stopping triggered after {self.patience} epochs!")
             if self.restore_best_weights and self.best_model_state:
                 model.load_state_dict(self.best_model_state)
             return True  # Stop training
@@ -179,20 +172,18 @@ class ReduceLROnPlateau:
             for param_group in self.optimizer.param_groups:
                 new_lr = max(param_group['lr'] * self.factor, self.min_lr)
                 if param_group['lr'] > new_lr:
-                    #print(f"Reducing learning rate from {param_group['lr']} to {new_lr}")
                     param_group['lr'] = new_lr
             self.epochs_since_improvement = 0  # Reset patience counter
 
     
 # Loop through feature sets and sampling methods
-for feature_set in feature_sets[40:45]:
+for feature_set in feature_sets[40:50]:
+
     X_train_subset = X_train_scaled_df[feature_set]
     X_test_subset = X_test_scaled_df[feature_set]
     input_dim = X_train_subset.shape[1]
 
     for sampling_name, sampler in samplers.items():
-        iteration_count += 1
-        print(f"\nIteration {iteration_count}/{total_iterations} | Features: {len(feature_set)} | Sampling: {sampling_name}")
 
         # Apply resampling
         X_resampled, y_resampled = X_train_subset, y_train_full
@@ -200,8 +191,8 @@ for feature_set in feature_sets[40:45]:
             X_resampled, y_resampled = sampler.fit_resample(X_train_subset, y_train_full)
 
         # Compute class weights
-        class_weights = compute_class_weight('balanced', classes=np.unique(y_resampled), y=y_resampled)
-        class_weight_dict = dict(zip(np.unique(y_resampled), class_weights))
+        # class_weights = compute_class_weight('balanced', classes=np.unique(y_resampled), y=y_resampled)
+        # class_weight_dict = dict(zip(np.unique(y_resampled), class_weights))
 
         # Create a model and grid search
         for activation_func in params_grid['activation function']:
@@ -209,23 +200,22 @@ for feature_set in feature_sets[40:45]:
                 for learning_rate in params_grid['learning rate']:
                     for dropout in params_grid['dropout']:
                         for batch_size in params_grid['batch_size']:
-                            print(f"{activation_func}, {hidden_layers}, {learning_rate}, {dropout}, {batch_size}")
+                            print(f"Activation function: {activation_func} | Hidden layers: {hidden_layers} | Learning rate: {learning_rate} | Dropout: {dropout} | Batch size: {batch_size}")
 
                             model = Model(input_dim, hidden_layers, activation_func, dropout)
                             model = nn.DataParallel(model)
                             model.to(device)
 
                             criterion = nn.BCELoss()
+                            # criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(class_weight_dict[1], dtype=torch.float32).to(device))
                             optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
                             early_stopping = EarlyStopping(patience=10, restore_best_weights=True)
                             reduce_lr = ReduceLROnPlateau(optimizer, factor=0.2, patience=5, min_lr=0.0001)
 
                             fold_scores = []
-                            best_model_validation = model
+                            best_model = None
                             max_f1_score = 0
-                            train_loss_history = []
-                            val_loss_history = []
 
                             for train_idx, val_idx in cv.split(X_resampled, y_resampled):
                                 X_train_split = torch.tensor(X_resampled.iloc[train_idx].values, dtype=torch.float32).to(device)
@@ -233,25 +223,18 @@ for feature_set in feature_sets[40:45]:
                                 X_val_split = torch.tensor(X_resampled.iloc[val_idx].values, dtype=torch.float32).to(device)
                                 y_val_split = torch.tensor(y_resampled.iloc[val_idx].values, dtype=torch.float32).to(device)
                                 
-                                train_loader = DataLoader(TensorDataset(X_train_split, y_train_split), batch_size=batch_size, shuffle=True)
-                                val_loader = DataLoader(TensorDataset(X_val_split, y_val_split), batch_size=batch_size)
+                                train_loader = DataLoader(TensorDataset(X_train_split, y_train_split), batch_size=batch_size,drop_last=True, shuffle=True)
+                                val_loader = DataLoader(TensorDataset(X_val_split, y_val_split), batch_size=batch_size, drop_last=True)
 
-                                val_loss = []
-                                train_loss = []
                                 for epoch in range(100):
                                     model.train()
-                                    training_loss = 0.0
                                     for X_batch, y_batch in train_loader:
-                                        X_batch, y_batch = X_batch.to(device), y_batch.to(device)
                                         optimizer.zero_grad()
                                         outputs = model(X_batch).squeeze()
                                         loss = criterion(outputs, y_batch.float())
                                         loss.backward()
                                         optimizer.step()
-                                        training_loss += loss.item()
-                                    training_loss /= len(train_loader)
-                                    train_loss.append(training_loss)
-
+  
                                     # Validation
                                     model.eval()
                                     y_true, y_pred = [], []
@@ -266,45 +249,39 @@ for feature_set in feature_sets[40:45]:
                                             y_pred.extend(preds.cpu().numpy())
                                             validation_loss += loss.item()                                    
                                     validation_loss /= len(val_loader)
-                                    val_loss.append(validation_loss)
+  
                                     f1 = f1_score(y_true, y_pred)
 
-                                    #print(f"Epoch {epoch+1}/{100} | Validation F1-score: {f1:.3f}")
-
-                                    reduce_lr(validation_loss)
-                                    if early_stopping(validation_loss, model):
+                                    if not early_stopping(validation_loss, model):
+                                        reduce_lr(validation_loss)
+                                    else:
                                         break
                                 
                                 # best for this fold
                                 if f1 >= max_f1_score:
-                                    best_model_validation = model
+                                    best_model = model
                                     max_f1_score = f1
-                                    train_loss_history.append(train_loss)
-                                    val_loss_history.append(val_loss)
+                                
+                            del model
+                            torch.cuda.empty_cache()
                             
                             # Evaluate the model on the trsin set
-                            best_model_validation.eval()
-                            best_model_train_loss = train_loss_history[-1]
-                            best_model_val_loss = val_loss_history[-1]
+                            best_model.eval()
                             with torch.no_grad():
-                                y_train_pred = (best_model_validation(torch.tensor(X_resampled.values, dtype=torch.float32).to(device)).squeeze() > 0.5).int().cpu().numpy()
+                                y_train_pred = (best_model(torch.tensor(X_resampled.values, dtype=torch.float32).to(device)).squeeze() > 0.5).int().cpu().numpy()
                                 accuracy_train = accuracy_score(y_resampled, y_train_pred)
                                 f1_score_train = f1_score(y_resampled, y_train_pred)
                                 conf_matrix_train = confusion_matrix(y_resampled, y_train_pred)
-                                # print(conf_matrix_train)
-                                # print(f"Training Accuracy: {accuracy_train:.3f}")
-                                # print(f"F1-score: {f1_score_train:.3f}")
+                                print(f"Training Accuracy: {accuracy_train:.3f} | F1-score: {f1_score_train:.3f}")
 
                                 # Save all models and configurations
                                 all_scores.append((f1_score_train, accuracy_train))
-                                all_models.append(best_model_validation)
+                                all_models.append(best_model)
                                 all_configs.append({
                                     "feature set": feature_set,
                                     "features": len(feature_set),
                                     "sampling": sampling_name,
                                     "confusion_matrix": conf_matrix_train.tolist(),
-                                    "train_loss_history": best_model_train_loss,
-                                    "val_loss_history": best_model_val_loss,
                                     "hyperparameters": {
                                         "activation function": activation_func,
                                         "hidden layer": hidden_layers,
@@ -313,69 +290,14 @@ for feature_set in feature_sets[40:45]:
                                         "batch_size": batch_size
                                     }
                                 })
-                            # # Sort the scores in descending order based on the F1-score (first value in tuple), keeping corresponding accuracy (second value)
-                            # sorted_scores_with_indices = sorted(enumerate(all_scores), key=lambda x: x[1][0], reverse=True)
 
-                            # # Sort the corresponding other files based on the sorted scores
-                            # all_scores = [all_scores[idx] for idx, _ in sorted_scores_with_indices]
-                            # all_models = [all_models[idx] for idx, _ in sorted_scores_with_indices]
-                            # all_configs = [all_configs[idx] for idx, _ in sorted_scores_with_indices]
+                                # Save all models and configurations
+                                with open(os.path.join(result_path, "all_scores.pkl"), 'wb') as file:
+                                    pickle.dump(all_scores, file)
+                                with open(os.path.join(result_path, "all_configs.pkl"), 'wb') as file:
+                                    pickle.dump(all_configs, file)
+                                with open(os.path.join(result_path, "all_models.pkl"), 'wb') as file:
+                                    pickle.dump(all_models, file)
 
-                            # Save all models and configurations
-                            with open(os.path.join(result_path, "all_scores_2.pkl"), 'wb') as file:
-                                pickle.dump(all_scores, file)
-                            with open(os.path.join(result_path, "all_configs_2.pkl"), 'wb') as file:
-                                pickle.dump(all_configs, file)
-                            with open(os.path.join(result_path, "all_models_2.pkl"), 'wb') as file:
-                                pickle.dump(all_models, file)
-
-# Sort the scores in descending order based on the F1-score (first value in tuple), keeping corresponding accuracy (second value)
-sorted_scores_with_indices = sorted(enumerate(all_scores), key=lambda x: x[1][0], reverse=True)
-
-# Sort the corresponding other files based on the sorted scores
-all_scores = [all_scores[idx] for idx, _ in sorted_scores_with_indices]
-all_models = [all_models[idx] for idx, _ in sorted_scores_with_indices]
-all_configs = [all_configs[idx] for idx, _ in sorted_scores_with_indices]
-
-# Ask user to choose the best model for testing
-print("\nChoose the best model configuration for the test set:")
-for idx, (original_idx, (f1_training, accuracy_training)) in enumerate(sorted_scores_with_indices):
-    print(f"{original_idx + 1}: F1-score = {f1_training:.3f}, Accuracy = {accuracy_training:.3f}")
-
-model_idx = int(input("Enter the index number of the model to evaluate on the test set: ")) - 1
-
-# Evaluate selected model
-selected_model = all_models[model_idx]
-selected_config = all_configs[model_idx]
-print("\nEvaluating Best Model on Test Set:")
-
-selected_model.eval()
-with torch.no_grad():
-    X_test_tensor = torch.tensor(X_test_scaled_df[selected_config['feature set']].values, dtype=torch.float32).to(device)
-    y_pred = (selected_model(X_test_tensor).squeeze() > 0.5).int().cpu().numpy()
-
-accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred)
-recall = recall_score(y_test, y_pred)
-f1 = f1_score(y_test, y_pred)
-
-print("\nTest Set Performance:")
-print(f"Accuracy: {accuracy:.3f}")
-print(f"F1-score: {f1:.3f}")
-print(f"Precision: {precision:.3f}")
-print(f"Recall: {recall:.3f}")
-
-# Confusion Matrix
-conf_matrix = confusion_matrix(y_test, y_pred)
-plt.figure(figsize=(6, 4))
-sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=["nDNA", "mtDNA"], yticklabels=["nDNA", "mtDNA"])
-plt.xlabel("Predicted Label")
-plt.ylabel("True Label")
-plt.title("Confusion Matrix of Selected Model")
-plt.show()
-
-# Assuming that mtDNA is the positive class, compute sensitivity and specificity
-spec = conf_matrix[0, 0] / (conf_matrix[0, 0] + conf_matrix[0, 1])
-sens = conf_matrix[1, 1] / (conf_matrix[1, 0] + conf_matrix[1, 1])
-print(f"Sensitivity: {sens:.3f}")
-print(f"Specificity: {spec:.3f}")
+                            del best_model
+                            torch.cuda.empty_cache()

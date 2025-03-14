@@ -42,7 +42,7 @@ if not os.path.exists(result_path):
     os.makedirs(result_path)
 
 # Load the dataset
-df = pd.read_csv(os.path.join(data_path, "df_symp.csv"))
+df = pd.read_csv(os.path.join(data_path, "df_no_symp.csv"))
 
 # Swap the values of 'gendna_type' (0 -> 1 and 1 -> 0) to consider mtDNA as the positive class
 df['gendna_type'] = df['gendna_type'].apply(lambda x: 1 if x == 0 else 0)

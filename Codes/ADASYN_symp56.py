@@ -291,9 +291,9 @@ for feature_set in feature_sets[0:1]:
                                 accuracy_train = accuracy_score(y_resampled, y_train_pred)
                                 f1_score_train = f1_score(y_resampled, y_train_pred)
                                 conf_matrix_train = confusion_matrix(y_resampled, y_train_pred)
-                                # print(conf_matrix_train)
-                                # print(f"Training Accuracy: {accuracy_train:.3f}")
-                                # print(f"F1-score: {f1_score_train:.3f}")
+                                print(conf_matrix_train)
+                                print(f"Training Accuracy: {accuracy_train:.3f}")
+                                print(f"F1-score: {f1_score_train:.3f}")
 
                                 # Save all models and configurations
                                 all_scores.append((f1_score_train, accuracy_train))

@@ -36,8 +36,8 @@ torch.backends.cudnn.benchmark = False
 
 # Set path
 general_path = os.path.dirname(os.getcwd())
-data_path = os.path.join(general_path, "Data\\data_genomit")
-result_path = os.path.join(general_path, "Results\\results_genomit\\symptoms_0\\SMOTE")
+data_path = os.path.join(general_path, "Data/data_genomit")
+result_path = os.path.join(general_path, "Results/results_genomit/symptoms_0/SMOTE")
 if not os.path.exists(result_path):
     os.makedirs(result_path)
 
